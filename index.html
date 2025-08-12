@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mint Elevator — Demo</title>
+  <style>
+    :root{--bg:#f7f8fb;--card:#fff;--muted:#6b7280;--border:#e5e7eb;--text:#0f172a;--accent:#10b981}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .container{max-width:1100px;margin:0 auto;padding:24px}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--accent);color:#fff;font-weight:800}
+    .title{font-size:20px;font-weight:700} .subtitle{color:var(--muted);font-size:12px}
+    .grid{display:grid;gap:12px} .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .card-h{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .card-c{padding:12px 16px}
+    .kpi{font-size:28px;font-weight:800} .muted{color:var(--muted);font-size:12px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+    input,textarea,select{border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#fff}
+    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-top:1px solid var(--border);text-align:left;font-size:14px}
+    .tabs{display:flex;gap:8px;margin-top:16px;margin-bottom:8px} .tab{padding:6px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer}
+    .tab.active{background:#111;color:#fff;border-color:#111}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 12px;border-radius:9999px;background:#111;color:#fff;font-size:12px}
+    .dialog{position:fixed;left:50%;top:12%;transform:translateX(-50%);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:16px;min-width:360px;z-index:20;max-width:90vw}
+    .hidden{display:none}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .textarea{width:100%;height:160px}
+    .help{font-size:12px;color:var(--muted)}
+    .right{margin-left:auto}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">M</div>
+        <div>
+          <div class="title">Mint Elevator — Үйл ажиллагааны төв</div>
+          <div class="subtitle">Борлуулалт · Угсралт · Засвар үйлчилгээ · Нөөц</div>
+        </div>
+      </div>
+      <div class="row">
+        <span id="authBadge" class="pill hidden">Admin нэвтэрсэн</span>
+        <button class="btn" id="openCustomer">Харилцагчийн хүсэлт</button>
+        <button class="btn" id="openLogin">Нэвтрэх</button>
+        <button class="btn" id="logoutBtn" class="hidden" style="display:none">Гарах</button>
+        <button class="btn" id="openData" style="display:none">Өгөгдөл (импорт/хадгалах)</button>
+        <button class="btn" id="openModal" style="display:none">Засварын дуудлага</button>
+      </div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:12px">
+      <div class="card"><div class="card-h">Нийт нээлттэй дуудлага</div><div class="card-c"><span class="kpi" id="kpiOpen">0</span> <span class="muted">open</span></div></div>
+      <div class="card"><div class="card-h">Ажиллаж буй дуудлага</div><div class="card-c"><span class="kpi" id="kpiInprog">0</span> <span class="muted">in progress</span></div></div>
+      <div class="card"><div class="card-h">SLA биелэлт (30 хоног)</div><div class="card-c"><span class="kpi">92%</span></div></div>
+      <div class="card"><div class="card-h">Нөөц багатай сэлбэг</div><div class="card-c"><span class="kpi" id="kpiLow">0</span> <span class="muted">items</span></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="tickets">Засвар</button>
+      <button class="tab" data-tab="install">Угсралт</button>
+      <button class="tab" data-tab="inventory">Сэлбэг</button>
+    </div>
+
+    <div id="viewTickets" class="card">
+      <div class="card-h">
+        <span>Засварын дуудлагын жагсаалт</span>
+        <div class="row right"><input placeholder="Хайх…" id="q" /><button class="btn" id="exportCsv">CSV экспорт</button></div>
+      </div>
+      <div class="card-c">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>ID</th><th>Харилцагч</th><th>Төхөөрөмж</th><th>Асуудал</th><th>Төлөв</th><th>Яаралтай</th><th>Огноо</th><th></th></tr></thead>
+            <tbody id="ticketsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewInstall" class="card hidden">
+      <div class="card-h">
+        <span>Угсралтын төслүүд — үе шат</span>
+        <button class="btn" id="openInstallModal" style="display:none">Шинэ төсөл</button>
+      </div>
+      <div class="card-c">
+        <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px" id="installs"></div>
+      </div>
+    </div>
+
+    <div id="viewInventory" class="card hidden">
+      <div class="card-h">
+        <span>Сэлбэг ба материал</span>
+        <button class="btn" id="openInvModal" style="display:none">Шинэ сэлбэг</button>
+      </div>
+      <div class="card-c">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>SKU</th><th>Нэр</th><th>Байршил</th><th>Нөөц</th><th>Доод түвшин</th><th></th></tr></thead>
+            <tbody id="invBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Login modal -->
+    <div id="loginModal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Админ / Инженер нэвтрэх</div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div><div class="muted">Имэйл</div><input id="lEmail" placeholder="admin@local" value="admin@local"/></div>
+        <div><div class="muted">Нууц үг</div><input id="lPass" type="password" placeholder="pass" value="pass"/></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cancelLogin">Болих</button>
+        <button class="btn" id="doLogin">Нэвтрэх</button>
+      </div>
+      <div class="help">Демо креденшл: <b>admin@local / pass</b> (зөвхөн демо).</div>
+    </div>
+
+    <!-- Customer request modal -->
+    <div id="custModal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Харилцагчийн засварын хүсэлт</div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div><div class="muted">Харилцагчийн нэр</div><input id="cName" placeholder="Астра Плаза ХХК"/></div>
+        <div><div class="muted">Утас</div><input id="cPhone" placeholder="+976 88xx-xxxx"/></div>
+        <div><div class="muted">Хаяг / Барилга</div><input id="cAddr" placeholder="СБД, 1-р хороо"/></div>
+        <div><div class="muted">Төхөөрөмж / Нэгж</div><input id="cUnit" placeholder="ELEV-AP-02"/></div>
+        <div><div class="muted">Асуудлын тайлбар</div><textarea id="cIssue" rows="3" placeholder="Ж: Хаалга хаагдах үед дуу чимээ"></textarea></div>
+        <div><div class="muted">Яаралтай байдал</div>
+          <select id="cPrio"><option>Low</option><option selected>Medium</option><option>High</option></select>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cancelCust">Болих</button>
+        <button class="btn" id="sendCust">Илгээх</button>
+      </div>
+      <div class="help">Демо горимд хүсэлт нь шууд доорх жагсаалтад “Open” төлөвтэй нэмэгдэнэ.</div>
+    </div>
+
+    <!-- Ticket modal (Admin) -->
+    <div id="modal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Шинэ засварын дуудлага</div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div><div class="muted">Харилцагч</div><input id="fCustomer" placeholder="Ж: Астра Плаза ХХК" /></div>
+        <div><div class="muted">Төхөөрөмж / Нэгж</div><input id="fUnit" placeholder="Ж: ELEV-AP-02" /></div>
+        <div><div class="muted">Асуудлын тайлбар</div><textarea id="fIssue" rows="3" placeholder="Хаалга хаагдах үед дуу чимээ"></textarea></div>
+        <div><div class="muted">Яаралтай байдал</div>
+          <select id="fPriority"><option>Low</option><option selected>Medium</option><option>High</option></select>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cancelModal">Болих</button>
+        <button class="btn" id="saveTicket">Үүсгэх</button>
+      </div>
+    </div>
+
+    <!-- Inventory modal -->
+    <div id="invModal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Шинэ сэлбэг нэмэх</div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div><div class="muted">SKU</div><input id="iSku" placeholder="INV-0001" /></div>
+        <div><div class="muted">Нэр</div><input id="iName" placeholder="Door Operator" /></div>
+        <div><div class="muted">Байршил</div><input id="iLoc" placeholder="Warehouse A" /></div>
+        <div class="two-col">
+          <div><div class="muted">Нөөц</div><input id="iStock" type="number" value="0" /></div>
+          <div><div class="muted">Доод түвшин</div><input id="iMin" type="number" value="0" /></div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cancelInv">Болих</button>
+        <button class="btn" id="saveInv">Хадгалах</button>
+      </div>
+    </div>
+
+    <!-- Install modal -->
+    <div id="installModal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Шинэ угсралтын төсөл</div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div><div class="muted">Төслийн ID</div><input id="pId" placeholder="P-600" /></div>
+        <div><div class="muted">Харилцагч</div><input id="pCustomer" placeholder="Их хотын цамхаг" /></div>
+        <div><div class="muted">Загвар</div><input id="pModel" placeholder="Gearless 1000kg" /></div>
+        <div><div class="muted">Хаяг</div><input id="pAddr" placeholder="СБД, 1-р хороо" /></div>
+        <div><div class="muted">Үе шат</div>
+          <select id="pStage"><option>Lead</option><option>Quote</option><option>Contract</option><option>Design</option><option>Installation</option><option>Commissioning</option><option>Handover</option></select>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cancelInstall">Болих</button>
+        <button class="btn" id="saveInstall">Хадгалах</button>
+      </div>
+    </div>
+
+    <!-- Data modal (import/export & save) -->
+    <div id="dataModal" class="dialog hidden">
+      <div style="font-weight:700;margin-bottom:8px">Өгөгдөл — импорт / экспорт / хадгалах</div>
+      <div class="two-col">
+        <div>
+          <div class="muted">Tickets CSV импорт</div>
+          <input type="file" id="csvTickets" accept=".csv" />
+          <div class="help">CSV толгой: <code>ID,Customer,Unit,Issue,Priority,Status,CreatedAt</code> — ID хоосон бол автоматаар үүсгэнэ.</div>
+          <div style="height:8px"></div>
+          <div class="muted">Inventory CSV импорт</div>
+          <input type="file" id="csvInv" accept=".csv" />
+          <div class="help">CSV толгой: <code>SKU,Name,Location,Stock,Min</code></div>
+        </div>
+        <div>
+          <div class="muted">JSON импорт</div>
+          <textarea id="jsonIn" class="textarea" placeholder='{"tickets":[],"installs":[],"inventory":[]}'></textarea>
+          <div class="row" style="justify-content:flex-end"><button class="btn" id="importJson">JSON-аас унших</button></div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:12px">
+        <div class="row">
+          <button class="btn" id="saveLocal">Браузерт хадгалах</button>
+          <button class="btn" id="loadLocal">Браузераас дуудах</button>
+          <button class="btn" id="clearLocal">Цэвэрлэх</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="exportJson">JSON экспорт</button>
+          <button class="btn" id="closeData">Хаах</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="muted" style="margin-top:16px;font-size:12px">© 2025 Mint Elevator — Демо.</div>
+  </div>
+
+  <script>
+    // --- Seed data ---
+    const stages = ["Lead","Quote","Contract","Design","Installation","Commissioning","Handover"];
+    let tickets = [
+      { id:"T-1001", customer:"Астра Плаза ХХК", unit:"ELEV-AP-02", issue:"Шинэчлэлтийн дараа хаалга дуу гарч байна", priority:"High", status:"Open", createdAt:"2025-08-01" },
+      { id:"T-1002", customer:"Наран Молл", unit:"ELEV-NM-01", issue:"Дуудлага хүлээх хугацаа удаан", priority:"Medium", status:"In Progress", createdAt:"2025-08-05" },
+      { id:"T-1003", customer:"Их хотын цамхаг", unit:"ELEV-ICT-06", issue:"Түвшинд очихгүй байна", priority:"High", status:"Open", createdAt:"2025-08-10" },
+    ];
+    let installs = [
+      { id:"P-501", customer:"Их хотын цамхаг", model:"Gearless 1000kg", address:"ХУД, 15-р хороо", stage:"Design" },
+      { id:"P-502", customer:"Астра Плаза ХХК", model:"Machine-room 800kg", address:"СБД, 1-р хороо", stage:"Installation" },
+      { id:"P-503", customer:"Наран Молл", model:"Panoramic 1600kg", address:"БГД, 6-р хороо", stage:"Commissioning" },
+    ];
+    let inventory = [
+      { sku:"INV-CTRL-01", name:"Controller Board", stock:12, min:5, location:"Warehouse A" },
+      { sku:"INV-DRV-02", name:"VVVF Drive", stock:4, min:6, location:"Warehouse B" },
+      { sku:"INV-DOOR-03", name:"Door Operator", stock:9, min:4, location:"Truck #2" },
+    ];
+
+    // --- Auth state ---
+    const AUTH_KEY = 'mintElevatorAuthV1';
+    let isAuthed = localStorage.getItem(AUTH_KEY) === '1';
+
+    const el = sel => document.querySelector(sel);
+    const els = sel => Array.from(document.querySelectorAll(sel));
+
+    function toast(msg){ const t=el('#toast'); t.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'),1500); }
+
+    function saveLocal(){ localStorage.setItem('mintElevatorDataV1', JSON.stringify({ tickets, installs, inventory })); toast('Хадгаллаа'); }
+    function loadLocal(){ const raw = localStorage.getItem('mintElevatorDataV1'); if(!raw) return toast('Өгөгдөл алга'); try{ const d = JSON.parse(raw); if(d.tickets) tickets=d.tickets; if(d.installs) installs=d.installs; if(d.inventory) inventory=d.inventory; renderAll(); toast('Амжилттай уншлаа'); }catch(e){ toast('JSON алдаа'); } }
+    function clearLocal(){ localStorage.removeItem('mintElevatorDataV1'); toast('Цэвэрлэсэн'); }
+
+    function renderKPIs(){
+      el('#kpiOpen').textContent = tickets.filter(t=>t.status==='Open').length;
+      el('#kpiInprog').textContent = tickets.filter(t=>t.status==='In Progress').length;
+      el('#kpiLow').textContent = inventory.filter(i=> i.stock <= i.min).length;
+    }
+
+    function renderTickets(){
+      const q = (el('#q').value || '').toLowerCase();
+      const rows = tickets.filter(t => !q || [t.id,t.customer,t.unit,t.issue,t.status].some(x=>String(x).toLowerCase().includes(q)))
+        .map(t => `<tr>
+          <td>${t.id}</td><td>${t.customer}</td><td>${t.unit}</td>
+          <td title="${t.issue}" style="max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.issue}</td>
+          <td><span class="pill">${t.status}</span></td>
+          <td><span class="pill">${t.priority}</span></td>
+          <td>${t.createdAt}</td>
+          <td>${isAuthed ? `<button class="btn" data-cycle="${t.id}">Төлөв солих</button>` : ''}</td>
+        </tr>`).join('');
+      el('#ticketsBody').innerHTML = rows || `<tr><td colspan="8" class="muted" style="text-align:center;padding:16px">Илэрц олдсонгүй</td></tr>`;
+    }
+
+    function renderInstalls(){
+      el('#installs').innerHTML = installs.map(p=>{
+        const dots = stages.map((s,idx)=>`<div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:9999px;background:${stages.indexOf(p.stage)>=idx?'#16a34a':'#e5e7eb'}"></div></div>`).join('');
+        return `<div class="card" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;gap:8px"><div><div style="font-weight:700">${p.id} · ${p.customer}</div><div class="muted">${p.model} — ${p.address}</div></div><span class="pill">${p.stage}</span></div>
+          <div style="height:8px"></div>
+          <div class="row">${dots}</div>
+          <div class="row" style="margin-top:8px">${isAuthed ? `<button class="btn" data-move="${p.id}:-1">Буцах</button><button class="btn" data-move="${p.id}:1">Дараагийн шат</button>` : ''}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderInventory(){
+      el('#invBody').innerHTML = inventory.map(i=>`<tr>
+        <td>${i.sku}</td><td>${i.name}</td><td>${i.location}</td><td>${i.stock}</td><td>${i.min}</td>
+        <td>${isAuthed ? `<button class="btn" data-inc="${i.sku}">+1 орлого</button>` : ''}</td>
+      </tr>`).join('');
+    }
+
+    function exportCSV(){
+      const headers = ["ID","Customer","Unit","Issue","Priority","Status","CreatedAt"];
+      const rows = tickets.map(t=>[t.id,t.customer,t.unit,`"${t.issue.replaceAll('"','""')}"`,t.priority,t.status,t.createdAt]);
+      const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = `tickets_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url); toast('CSV экспорт бэлэн');
+    }
+
+    function parseCSV(text){
+      const lines = text.split(/\r?\n/).filter(Boolean); if(lines.length<2) return [];
+      const headers = lines[0].split(',').map(h=>h.trim());
+      return lines.slice(1).map(line=>{
+        const cols = []; let cur=''; let inQ=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ inQ=!inQ; } else if(ch===',' && !inQ){ cols.push(cur); cur=''; } else { cur+=ch; } } cols.push(cur);
+        const obj={}; headers.forEach((h,i)=> obj[h] = (cols[i]||'').replaceAll('""','"').replace(/^"|"$/g,''));
+        return obj;
+      });
+    }
+
+    function importTicketsCSV(file){
+      const r = new FileReader(); r.onload = () => {
+        const rows = parseCSV(String(r.result));
+        rows.forEach(row=>{
+          const id = row.ID && row.ID.trim() ? row.ID.trim() : `T-${Math.floor(1000+Math.random()*9000)}`;
+          tickets.unshift({ id, customer: row.Customer||'', unit: row.Unit||'', issue: row.Issue||'', priority: row.Priority||'Medium', status: row.Status||'Open', createdAt: row.CreatedAt || new Date().toISOString().slice(0,10) });
+        });
+        renderTickets(); renderKPIs(); toast('Tickets CSV импорт хийв');
+      }; r.readAsText(file);
+    }
+
+    function importInvCSV(file){
+      const r = new FileReader(); r.onload = () => {
+        const rows = parseCSV(String(r.result));
+        rows.forEach(row=>{
+          const sku = (row.SKU||'').trim(); if(!sku) return;
+          inventory.unshift({ sku, name: row.Name||'', location: row.Location||'', stock: Number(row.Stock||0), min: Number(row.Min||0) });
+        });
+        renderInventory(); renderKPIs(); toast('Inventory CSV импорт хийв');
+      }; r.readAsText(file);
+    }
+
+    function exportJSON(){
+      const blob = new Blob([JSON.stringify({tickets,installs,inventory}, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='mint-elevator-data.json'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function importJSON(){
+      try{
+        const d = JSON.parse(el('#jsonIn').value || '{}');
+        if(d.tickets) tickets = d.tickets; if(d.installs) installs = d.installs; if(d.inventory) inventory = d.inventory;
+        renderAll(); toast('JSON импорт амжилттай');
+      }catch(e){ toast('JSON буруу байна'); }
+    }
+
+    function renderAuth(){
+      el('#authBadge').classList.toggle('hidden', !isAuthed);
+      el('#openData').style.display = isAuthed ? '' : 'none';
+      el('#openModal').style.display = isAuthed ? '' : 'none';
+      el('#openInvModal').style.display = isAuthed ? '' : 'none';
+      el('#openInstallModal').style.display = isAuthed ? '' : 'none';
+      el('#logoutBtn').style.display = isAuthed ? '' : 'none';
+      el('#openLogin').style.display = isAuthed ? 'none' : '';
+    }
+
+    function renderAll(){ renderAuth(); renderKPIs(); renderTickets(); renderInstalls(); renderInventory(); }
+
+    // --- Events ---
+    els('.tab').forEach(b=> b.addEventListener('click', e=>{
+      els('.tab').forEach(x=>x.classList.remove('active')); e.target.classList.add('active');
+      const tab = e.target.getAttribute('data-tab');
+      el('#viewTickets').classList.add('hidden');
+      el('#viewInstall').classList.add('hidden');
+      el('#viewInventory').classList.add('hidden');
+      if(tab==='tickets') el('#viewTickets').classList.remove('hidden');
+      if(tab==='install') el('#viewInstall').classList.remove('hidden');
+      if(tab==='inventory') el('#viewInventory').classList.remove('hidden');
+    }));
+
+    el('#q').addEventListener('input', renderTickets);
+    el('#exportCsv').addEventListener('click', exportCSV);
+
+    document.body.addEventListener('click', e=>{
+      const t = e.target;
+      if(t.matches('[data-cycle]')){
+        if(!isAuthed) return toast('Энэ үйлдэлд нэвтрэх шаардлагатай');
+        const id = t.getAttribute('data-cycle');
+        tickets = tickets.map(x=> x.id===id ? {...x, status: x.status==='Open' ? 'In Progress' : x.status==='In Progress' ? 'Resolved':'Open'} : x);
+        renderTickets(); renderKPIs(); toast('Төлөв шинэчлэгдлээ');
+      }
+      if(t.matches('[data-move]')){
+        if(!isAuthed) return toast('Энэ үйлдэлд нэвтрэх шаардлагатай');
+        const [id, dir] = t.getAttribute('data-move').split(':');
+        installs = installs.map(p=>{ if(p.id!==id) return p; const idx = stages.indexOf(p.stage); const next = Math.max(0, Math.min(stages.length-1, idx+Number(dir))); return {...p, stage: stages[next]};});
+        renderInstalls();
+      }
+      if(t.matches('[data-inc]')){
+        if(!isAuthed) return toast('Энэ үйлдэлд нэвтрэх шаардлагатай');
+        const sku = t.getAttribute('data-inc');
+        inventory = inventory.map(i=> i.sku===sku ? {...i, stock:i.stock+1} : i);
+        renderInventory(); renderKPIs(); toast(`${sku}: +1 орлого`);
+      }
+    });
+
+    // Login / Logout
+    el('#openLogin').addEventListener('click', ()=> el('#loginModal').classList.remove('hidden'));
+    el('#cancelLogin').addEventListener('click', ()=> el('#loginModal').classList.add('hidden'));
+    el('#doLogin').addEventListener('click', ()=>{
+      const email = el('#lEmail').value.trim();
+      const pass = el('#lPass').value.trim();
+      if(email==='admin@local' && pass==='pass'){
+        isAuthed = true; localStorage.setItem(AUTH_KEY,'1'); el('#loginModal').classList.add('hidden'); renderAll(); toast('Амжилттай нэвтэрлээ');
+      } else { toast('Имэйл / нууц үг буруу'); }
+    });
+    el('#logoutBtn').addEventListener('click', ()=>{ isAuthed=false; localStorage.removeItem(AUTH_KEY); renderAll(); toast('Гарлаа'); });
+
+    // Admin ticket modal
+    el('#openModal').addEventListener('click', ()=> el('#modal').classList.remove('hidden'));
+    el('#cancelModal').addEventListener('click', ()=> el('#modal').classList.add('hidden'));
+    el('#saveTicket').addEventListener('click', ()=>{
+      const customer = el('#fCustomer').value.trim();
+      const unit = el('#fUnit').value.trim();
+      const issue = el('#fIssue').value.trim();
+      const priority = el('#fPriority').value;
+      if(!customer || !unit || !issue){ toast('Талбаруудыг бөглөнө үү'); return; }
+      const id = `T-${Math.floor(1000 + Math.random()*9000)}`;
+      const createdAt = new Date().toISOString().slice(0,10);
+      tickets = [{ id, customer, unit, issue, priority, status:'Open', createdAt }, ...tickets];
+      renderTickets(); renderKPIs(); el('#modal').classList.add('hidden'); toast(`Дуудлага үүсгэв — ${id}`);
+      el('#fCustomer').value=''; el('#fUnit').value=''; el('#fIssue').value=''; el('#fPriority').value='Medium';
+    });
+
+    // Customer request modal
+    el('#openCustomer').addEventListener('click', ()=> el('#custModal').classList.remove('hidden'));
+    el('#cancelCust').addEventListener('click', ()=> el('#custModal').classList.add('hidden'));
+    el('#sendCust').addEventListener('click', ()=>{
+      const name = el('#cName').value.trim();
+      const phone = el('#cPhone').value.trim();
+      const addr = el('#cAddr').value.trim();
+      const unit = el('#cUnit').value.trim();
+      const issue = el('#cIssue').value.trim();
+      const priority = el('#cPrio').value;
+      if(!name || !phone || !unit || !issue){ toast('Талбаруудыг бүрэн бөглөнө үү'); return; }
+      const id = `T-${Math.floor(1000 + Math.random()*9000)}`; const createdAt = new Date().toISOString().slice(0,10);
+      const note = `${issue} — (Холбоо барих: ${phone}; Хаяг: ${addr || '—'}; Source: Customer)`;
+      tickets = [{ id, customer: name, unit, issue: note, priority, status:'Open', createdAt }, ...tickets];
+      renderTickets(); renderKPIs(); el('#custModal').classList.add('hidden'); toast('Хүсэлтийг илгээлээ');
+      el('#cName').value=''; el('#cPhone').value=''; el('#cAddr').value=''; el('#cUnit').value=''; el('#cIssue').value=''; el('#cPrio').value='Medium';
+    });
+
+    // Data modal handlers
+    el('#openData').addEventListener('click', ()=> el('#dataModal').classList.remove('hidden'));
+    el('#closeData').addEventListener('click', ()=> el('#dataModal').classList.add('hidden'));
+    el('#csvTickets').addEventListener('change', (ev)=>{ const f=ev.target.files[0]; if(f) importTicketsCSV(f); ev.target.value=''; });
+    el('#csvInv').addEventListener('change', (ev)=>{ const f=ev.target.files[0]; if(f) importInvCSV(f); ev.target.value=''; });
+    el('#saveLocal').addEventListener('click', saveLocal);
+    el('#loadLocal').addEventListener('click', loadLocal);
+    el('#clearLocal').addEventListener('click', clearLocal);
+    el('#exportJson').addEventListener('click', exportJSON);
+    el('#importJson').addEventListener('click', importJSON);
+
+    // Initial render
+    renderAll();
+  </script>
+</body>
+</html>
